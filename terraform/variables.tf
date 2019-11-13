@@ -17,5 +17,5 @@ variable "app_version" {
   type = string
 
   # The Lambda version to build against
-  default = "1.0.6"
+  default = "1.0.7"
 }

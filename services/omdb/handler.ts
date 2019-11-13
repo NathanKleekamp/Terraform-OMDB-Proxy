@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 interface QueryStringParams {
   i?: string;
   t?: string;
+  s?: string;
   type?: string;
   y?: number;
   plot?: string;
