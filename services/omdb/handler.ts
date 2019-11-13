@@ -1,5 +1,6 @@
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import fetch from 'node-fetch';
+import AWS from 'aws-sdk';
 
 interface QueryStringParams {
   i?: string;
@@ -21,6 +22,7 @@ function processQueryStringParams(params: QueryStringParams): string {
 
 export const handler: APIGatewayProxyHandler  = async (event) => {
   const key = process.env.OMDB_KEY;
+  const queue = new AWS.SQS({ apiVersion: '2012-11-05' });
   let data;
 
   try {
@@ -31,6 +33,18 @@ export const handler: APIGatewayProxyHandler  = async (event) => {
   } catch(error) {
     console.error(error);
   }
+
+  const { Title: title } = data;
+  queue.sendMessage({
+    MessageBody: title,
+    QueueUrl: 'https://sqs.us-east-1.amazonaws.com/237632529378/movie_queue',
+  }, (error, data) => {
+    if (error) {
+      console.error('error', error);
+    } else {
+      console.log('success', data.MessageId);
+    }
+  });
 
   return {
     statusCode: 200,

@@ -1,3 +1,7 @@
+locals {
+  function_name = "OMDB_Proxy"
+}
+
 provider "aws" {
   region = "${var.aws_region}"
 }
@@ -11,7 +15,7 @@ data "aws_secretsmanager_secret_version" "omdb_api_key" {
 }
 
 resource "aws_lambda_function" "omdb_proxy" {
-  function_name = "OMDB_Proxy"
+  function_name = local.function_name
 
   # The bucket name as created earlier with "aws s3api create-bucket"
   s3_bucket = "${var.s3_bucket}"
@@ -30,6 +34,12 @@ resource "aws_lambda_function" "omdb_proxy" {
       OMDB_KEY = jsondecode(data.aws_secretsmanager_secret_version.omdb_api_key.secret_string)["OmdbApiKey"]
     }
 	}
+
+  depends_on = [
+    "aws_iam_role_policy_attachment.lambda_queue",
+    "aws_iam_role_policy_attachment.lambda_logs",
+    "aws_cloudwatch_log_group.omdb_proxy"
+  ]
 }
 
 # IAM role which dictates what other AWS services the Lambda function
@@ -52,6 +62,63 @@ resource "aws_iam_role" "lambda_exec" {
   ]
 }
 EOF
+}
+
+resource "aws_iam_policy" "lambda_logging" {
+  name = "serverless_omdb_proxy_lambda_logging"
+  path = "/"
+  description = "IAM policy for logging from the OMDB proxy lambda"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:*",
+      "Effect": "Allow"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "lambda_queue" {
+  name = "serverless_omdb_proxy_lambda_queue"
+  path = "/"
+  description = "IAM policy for interacting with SQS from the OMDB proxy lambda"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "sqs:SendMessage"
+      ],
+      "Resource": "${aws_sqs_queue.movie_queue.arn}",
+      "Effect": "Allow"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_logs" {
+  role = "${aws_iam_role.lambda_exec.name}"
+  policy_arn = "${aws_iam_policy.lambda_logging.arn}"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_queue" {
+  role = "${aws_iam_role.lambda_exec.name}"
+  policy_arn = "${aws_iam_policy.lambda_queue.arn}"
+}
+
+resource "aws_cloudwatch_log_group" "omdb_proxy" {
+  name = "/aws/lambda/${local.function_name}"
+  retention_in_days = 14
 }
 
 resource "aws_api_gateway_resource" "proxy" {

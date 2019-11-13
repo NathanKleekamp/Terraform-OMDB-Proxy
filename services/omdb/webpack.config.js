@@ -16,6 +16,9 @@ module.exports = {
     filename: '[name].js',
   },
   target: 'node',
+  externals: {
+    'aws-sdk': 'aws-sdk',
+  },
   module: {
     rules: [
       {
