@@ -1,0 +1,5 @@
+.DS_Store
+.terraform
+.webpack
+build.zip
+node_modules

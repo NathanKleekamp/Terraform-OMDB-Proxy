@@ -1,0 +1,16 @@
+{
+  "name": "OMDBProxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "deploy:omdb": "rm -rf services/omdb/.webpack services/omdb/build.zip && PRODUCTION=true webpack --config services/omdb/webpack.config.js && zip --junk-paths services/omdb/build.zip services/omdb/.webpack/main.js && aws s3 cp services/omdb/build.zip s3://bbp-omdb-serverless/version/1.0.6/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10"
+  }
+}
